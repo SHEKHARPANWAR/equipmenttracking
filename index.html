@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Syrma SGS Equipment Management System</title>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- QR Code generator -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+  :root{
+    --primary:#0b3d6f;
+    --primary-dark:#082c50;
+    --primary-light:#2e6da4;
+    --accent:#00a3a1;
+    --bg:#f0f4f9;
+    --surface:#ffffff;
+    --text:#1b2430;
+    --text-muted:#647386;
+    --border:#dde4ec;
+    --success:#1e8e3e;
+    --success-bg:#e7f5ea;
+    --warning:#b8860b;
+    --warning-bg:#fff6e0;
+    --danger:#c62828;
+    --danger-bg:#fdecec;
+    --radius:10px;
+    --shadow:0 2px 10px rgba(11,61,111,.07);
+    --shadow-lg:0 8px 28px rgba(11,61,111,.14);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',-apple-system,Segoe UI,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:60px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:.3px;}
+
+  /* ===================== HEADER ===================== */
+  header.topbar{
+    background:linear-gradient(120deg,var(--primary-dark) 0%,var(--primary) 55%,var(--primary-light) 100%);
+    color:#fff;
+    position:sticky; top:0; z-index:50;
+    box-shadow:var(--shadow-lg);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 36px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 36px),
+      linear-gradient(120deg,var(--primary-dark) 0%,var(--primary) 55%,var(--primary-light) 100%);
+  }
+  .topbar-inner{
+    max-width:1400px; margin:0 auto; padding:16px 24px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand .logo-badge{
+    width:48px; height:48px; border-radius:10px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:#fff; flex-shrink:0;
+  }
+  .brand h1{margin:0; font-size:19px; font-weight:800; letter-spacing:.3px;}
+  .brand p{margin:2px 0 0; font-size:12px; color:rgba(255,255,255,.75); font-weight:500; letter-spacing:.5px; text-transform:uppercase;}
+
+  .search-wrap{
+    flex:1 1 360px; max-width:480px; position:relative;
+  }
+  .search-wrap i{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,.7);}
+  .search-wrap input{
+    width:100%; padding:11px 14px 11px 40px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.12);
+    color:#fff; font-size:14px; outline:none; transition:.15s;
+  }
+  .search-wrap input::placeholder{color:rgba(255,255,255,.65);}
+  .search-wrap input:focus{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.5);}
+
+  /* ===================== LAYOUT ===================== */
+  .container{max-width:1400px; margin:0 auto; padding:24px;}
+
+  .stats-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:16px; margin-bottom:24px;
+  }
+  .stat-card{
+    background:var(--surface); border-radius:var(--radius); padding:18px 20px;
+    box-shadow:var(--shadow); display:flex; align-items:center; gap:16px;
+    border-left:4px solid var(--primary); position:relative; overflow:hidden;
+  }
+  .stat-card.active{border-left-color:var(--success);}
+  .stat-card.due{border-left-color:var(--warning);}
+  .stat-card.overdue{border-left-color:var(--danger);}
+  .stat-icon{
+    width:48px; height:48px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    background:var(--bg); color:var(--primary);
+  }
+  .stat-card.active .stat-icon{background:var(--success-bg); color:var(--success);}
+  .stat-card.due .stat-icon{background:var(--warning-bg); color:var(--warning);}
+  .stat-card.overdue .stat-icon{background:var(--danger-bg); color:var(--danger);}
+  .stat-num{font-size:26px; font-weight:800; line-height:1.1;}
+  .stat-label{font-size:12.5px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:2px;}
+
+  .card{
+    background:var(--surface); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin-bottom:24px; overflow:hidden;
+  }
+  .card-head{
+    padding:18px 22px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .card-head h2{margin:0; font-size:16px; font-weight:700; display:flex; align-items:center; gap:10px;}
+  .card-head h2 i{color:var(--primary);}
+  .card-body{padding:22px;}
+
+  /* ===================== FORM ===================== */
+  .form-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:16px 18px;
+  }
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12.5px; font-weight:700; color:var(--text); letter-spacing:.2px;}
+  .field label .req{color:var(--danger); margin-left:2px;}
+  .field input, .field select, .field textarea{
+    border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+    font-size:14px; font-family:inherit; color:var(--text); background:#fbfcfe;
+    outline:none; transition:.15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(46,109,164,.12); background:#fff;
+  }
+  .field textarea{resize:vertical; min-height:64px;}
+  .field.invalid input, .field.invalid select{border-color:var(--danger); background:var(--danger-bg);}
+
+  /* ===================== UPLOAD ===================== */
+  .upload-zone{
+    border:2px dashed var(--border); border-radius:var(--radius);
+    padding:22px; text-align:center; background:#fafcff; cursor:pointer;
+    transition:.15s; margin-top:6px;
+  }
+  .upload-zone:hover, .upload-zone.dragover{border-color:var(--primary-light); background:#f1f7fd;}
+  .upload-zone i{font-size:26px; color:var(--primary-light); margin-bottom:8px;}
+  .upload-zone p{margin:0; font-size:13px; color:var(--text-muted);}
+  .upload-zone strong{color:var(--primary);}
+  #fileInput{display:none;}
+
+  .doc-chip-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+  .doc-chip{
+    display:flex; align-items:center; gap:8px; background:var(--bg);
+    border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12.5px; font-weight:600;
+  }
+  .doc-chip i.fa-file-pdf{color:#c62828;}
+  .doc-chip i.fa-file-image{color:#1565c0;}
+  .doc-chip .remove-doc{cursor:pointer; color:var(--text-muted); margin-left:4px;}
+  .doc-chip .remove-doc:hover{color:var(--danger);}
+  .doc-chip img{width:28px; height:28px; object-fit:cover; border-radius:4px;}
+
+  /* ===================== BUTTONS ===================== */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; justify-content:center;
+    border:none; border-radius:8px; padding:11px 20px; font-size:14px; font-weight:700;
+    cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap;
+  }
+  .btn-primary{background:var(--primary); color:#fff;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-secondary{background:#fff; color:var(--primary); border:1px solid var(--border);}
+  .btn-secondary:hover{background:var(--bg);}
+  .btn-success{background:var(--success); color:#fff;}
+  .btn-success:hover{filter:brightness(.92);}
+  .btn-outline{background:transparent; color:var(--text-muted); border:1px solid var(--border);}
+  .btn-outline:hover{background:var(--bg); color:var(--text);}
+  .btn-sm{padding:8px 14px; font-size:13px;}
+  .btn-row{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;}
+
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap;}
+
+  /* ===================== TABLE ===================== */
+  .table-wrap{overflow-x:auto; border-radius:8px; border:1px solid var(--border);}
+  table{width:100%; border-collapse:collapse; min-width:1100px; font-size:13.5px;}
+  thead th{
+    background:var(--primary); color:#fff; text-align:left; padding:12px 14px;
+    font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+    white-space:nowrap; position:sticky; top:0; cursor:pointer; user-select:none;
+  }
+  thead th i.sort-icon{margin-left:6px; font-size:10px; opacity:.7;}
+  thead th.no-sort{cursor:default;}
+  tbody tr{border-bottom:1px solid var(--border); transition:.1s;}
+  tbody tr:hover{background:#f5f9fd; cursor:pointer;}
+  tbody td{padding:10px 14px; vertical-align:middle;}
+  tbody tr.row-overdue{box-shadow:inset 4px 0 0 var(--danger);}
+  tbody tr.row-due{box-shadow:inset 4px 0 0 var(--warning);}
+  tbody tr.row-valid{box-shadow:inset 4px 0 0 var(--success);}
+  tbody tr.row-retired{box-shadow:inset 4px 0 0 #9aa5b1;}
+
+  .qr-cell{width:48px; height:48px;}
+  .qr-cell > div{width:46px; height:46px;}
+  .qr-cell img, .qr-cell canvas{width:46px !important; height:46px !important;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px;
+    font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+  }
+  .badge-active{background:var(--success-bg); color:var(--success);}
+  .badge-maintenance{background:var(--warning-bg); color:var(--warning);}
+  .badge-due{background:#fdf0e3; color:#c0622a;}
+  .badge-retired{background:#eceff2; color:#6b7785;}
+
+  .cal-pill{display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:12.5px;}
+  .cal-dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+  .cal-dot.overdue{background:var(--danger);}
+  .cal-dot.due{background:var(--warning);}
+  .cal-dot.valid{background:var(--success);}
+  .cal-dot.retired{background:#9aa5b1;}
+
+  .action-icons{display:flex; gap:6px;}
+  .icon-btn{
+    width:32px; height:32px; border-radius:7px; border:1px solid var(--border); background:#fff;
+    color:var(--text-muted); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:13px; transition:.15s;
+  }
+  .icon-btn:hover{background:var(--primary); color:#fff; border-color:var(--primary);}
+  .icon-btn.danger:hover{background:var(--danger); border-color:var(--danger);}
+  .icon-btn.success:hover{background:var(--success); border-color:var(--success);}
+
+  .empty-state{padding:50px 20px; text-align:center; color:var(--text-muted);}
+  .empty-state i{font-size:38px; margin-bottom:12px; color:var(--border);}
+
+  /* ===================== MODAL ===================== */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(10,25,45,.55); display:none;
+    align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff; border-radius:var(--radius); max-width:680px; width:100%;
+    max-height:88vh; overflow:auto; box-shadow:var(--shadow-lg); animation:pop .18s ease;
+  }
+  @keyframes pop{from{transform:scale(.96); opacity:0;} to{transform:scale(1); opacity:1;}}
+  .modal-head{
+    padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; background:#fff; z-index:2;
+  }
+  .modal-head h3{margin:0; font-size:17px; font-weight:800; display:flex; align-items:center; gap:10px;}
+  .modal-head h3 i{color:var(--primary);}
+  .modal-close{background:none; border:none; font-size:18px; color:var(--text-muted); cursor:pointer; width:32px; height:32px; border-radius:50%;}
+  .modal-close:hover{background:var(--bg); color:var(--text);}
+  .modal-body{padding:22px;}
+
+  .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:6px;}
+  .detail-grid .full{grid-column:1/-1;}
+  .detail-item label{display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px;}
+  .detail-item div{font-size:14.5px; font-weight:600;}
+  .detail-qr-wrap{display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px; background:var(--bg); border-radius:var(--radius); margin-bottom:18px;}
+  .detail-qr-wrap .asset-tag{font-family:'IBM Plex Mono',monospace; font-weight:700; letter-spacing:1px; color:var(--primary);}
+
+  .docs-list{display:flex; flex-direction:column; gap:8px; margin-top:8px;}
+  .doc-row{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border);
+    border-radius:8px; background:#fafcff;
+  }
+  .doc-row .doc-thumb{width:40px; height:40px; border-radius:6px; object-fit:cover; flex-shrink:0; background:#eef2f7; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:16px;}
+  .doc-row .doc-name{flex:1; font-size:13px; font-weight:600; word-break:break-all;}
+  .section-title{font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin:18px 0 8px;}
+
+  /* ===================== LABEL ===================== */
+  #labelArea{
+    width:100mm; height:50mm; border:1px dashed var(--border); margin:0 auto;
+    display:flex; flex-direction:column; justify-content:space-between; padding:4mm;
+    font-family:'Inter',sans-serif;
+  }
+  #labelArea .label-top{display:flex; justify-content:space-between; align-items:flex-start; gap:6px;}
+  #labelArea .label-company{font-size:11pt; font-weight:800; color:var(--primary);}
+  #labelArea .label-info{font-size:8pt; line-height:1.5;}
+  #labelArea .label-info b{display:inline-block; min-width:28mm;}
+  #labelArea .label-qr{width:18mm; height:18mm; flex-shrink:0;}
+  #labelArea .label-qr img, #labelArea .label-qr canvas{width:18mm !important; height:18mm !important;}
+  #labelArea .label-footer{font-size:7pt; color:#888; text-align:right;}
+
+  /* ===================== PRINT ===================== */
+  @media print{
+    body.printing-label *{visibility:hidden;}
+    body.printing-label #printLabelWrap, body.printing-label #printLabelWrap *{visibility:visible;}
+    body.printing-label #printLabelWrap{position:absolute; top:0; left:0; width:100mm; height:50mm; margin:0; padding:0;}
+    body.printing-label #labelArea{border:none; width:100mm; height:50mm;}
+    @page{size:100mm 50mm; margin:0;}
+  }
+
+  footer.app-footer{
+    text-align:center; color:var(--text-muted); font-size:12.5px; padding:20px; margin-top:10px;
+  }
+
+  /* ===================== RESPONSIVE ===================== */
+  @media (max-width:768px){
+    .topbar-inner{flex-direction:column; align-items:stretch;}
+    .search-wrap{max-width:100%;}
+    .card-head{flex-direction:column; align-items:flex-start;}
+    .detail-grid{grid-template-columns:1fr;}
+    .toolbar{width:100%;}
+    .toolbar .btn{flex:1 1 auto;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="logo-badge"><i class="fa-solid fa-gears"></i></div>
+      <div>
+        <h1>Syrma SGS Equipment Management System</h1>
+        <p>Asset Register &amp; Calibration Tracking</p>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="searchInput" placeholder="Search by Asset Number or Serial Number..." oninput="renderTable()">
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ===================== STATS ===================== -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+      <div>
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Total Equipment</div>
+      </div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div>
+        <div class="stat-num" id="statActive">0</div>
+        <div class="stat-label">Active Equipment</div>
+      </div>
+    </div>
+    <div class="stat-card due">
+      <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+      <div>
+        <div class="stat-num" id="statDue">0</div>
+        <div class="stat-label">Calibration Due Soon</div>
+      </div>
+    </div>
+    <div class="stat-card overdue">
+      <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div>
+        <div class="stat-num" id="statOverdue">0</div>
+        <div class="stat-label">Overdue Calibration</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== EQUIPMENT FORM ===================== -->
+  <div class="card">
+    <div class="card-head">
+      <h2><i class="fa-solid fa-circle-plus"></i> <span id="formTitle">Add New Equipment</span></h2>
+    </div>
+    <div class="card-body">
+      <form id="equipmentForm" autocomplete="off">
+        <div class="form-grid">
+          <div class="field" id="f-assetNumber">
+            <label>Asset Number <span class="req">*</span></label>
+            <input type="text" id="assetNumber" class="mono" placeholder="e.g. SSGS-AST-0001" required>
+          </div>
+          <div class="field" id="f-serialNumber">
+            <label>Serial Number <span class="req">*</span></label>
+            <input type="text" id="serialNumber" class="mono" placeholder="e.g. SN-2024-0098" required>
+          </div>
+          <div class="field" id="f-machineName">
+            <label>Machine Name <span class="req">*</span></label>
+            <input type="text" id="machineName" placeholder="e.g. Digital Vernier Caliper" required>
+          </div>
+          <div class="field" id="f-calibrationDueDate">
+            <label>Calibration Due Date <span class="req">*</span></label>
+            <input type="date" id="calibrationDueDate" required>
+          </div>
+          <div class="field" id="f-location">
+            <label>Location</label>
+            <input type="text" id="location" list="locationList" placeholder="e.g. Plant 2 - SMT Line 3">
+            <datalist id="locationList">
+              <option value="Plant 1 - SMT Line 1">
+              <option value="Plant 1 - SMT Line 2">
+              <option value="Plant 2 - PCB Assembly">
+              <option value="Plant 2 - Testing Lab">
+              <option value="Quality Lab">
+              <option value="Stores / Warehouse">
+            </datalist>
+          </div>
+          <div class="field" id="f-owner">
+            <label>Equipment Owner</label>
+            <input type="text" id="owner" placeholder="e.g. Rajesh Kumar">
+          </div>
+          <div class="field" id="f-department">
+            <label>Department</label>
+            <input type="text" id="department" list="deptList" placeholder="e.g. Quality Assurance">
+            <datalist id="deptList">
+              <option value="Production">
+              <option value="Quality Assurance">
+              <option value="Maintenance">
+              <option value="R&amp;D">
+              <option value="Testing / Lab">
+              <option value="Stores / Warehouse">
+              <option value="SMT">
+              <option value="PCB Assembly">
+            </datalist>
+          </div>
+          <div class="field" id="f-status">
+            <label>Equipment Status <span class="req">*</span></label>
+            <select id="status" required>
+              <option value="Active">Active</option>
+              <option value="Under Maintenance">Under Maintenance</option>
+              <option value="Calibration Due">Calibration Due</option>
+              <option value="Retired">Retired</option>
+            </select>
+          </div>
+          <div class="field full" id="f-remarks">
+            <label>Remarks</label>
+            <textarea id="remarks" placeholder="Additional notes about this equipment..."></textarea>
+          </div>
+
+          <!-- Document Upload -->
+          <div class="field full">
+            <label>Upload Documents (PDF, JPG, JPEG, PNG)</label>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <p><strong>Click to upload</strong> or drag &amp; drop files here</p>
+              <p>Calibration certificates, photos, manuals etc.</p>
+              <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+            </div>
+            <div class="doc-chip-list" id="pendingDocList"></div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fa-solid fa-floppy-disk"></i> Add Equipment</button>
+          <button type="button" class="btn btn-outline" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Reset / Cancel Edit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== EQUIPMENT LIST ===================== -->
+  <div class="card">
+    <div class="card-head">
+      <h2><i class="fa-solid fa-list-check"></i> Equipment List</h2>
+      <div class="toolbar">
+        <button class="btn btn-success btn-sm" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="printList()"><i class="fa-solid fa-print"></i> Print List</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="no-sort">QR</th>
+              <th onclick="sortTable('assetNumber')">Asset No. <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('serialNumber')">Serial No. <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('machineName')">Machine Name <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('calibrationDueDate')">Calibration Due <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('location')">Location <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('owner')">Owner <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('department')">Department <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th onclick="sortTable('status')">Status <i class="fa-solid fa-sort sort-icon"></i></th>
+              <th class="no-sort">Documents</th>
+              <th class="no-sort">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="equipmentTableBody">
+            <!-- rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <i class="fa-solid fa-box-open"></i>
+        <p>No equipment found. Add a new asset using the form above.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    &copy; <span id="yearNow"></span> Syrma SGS Technology Ltd. &mdash; Equipment Management System. Data stored locally in this browser.
+  </footer>
+</div>
+
+<!-- ===================== DETAILS MODAL ===================== -->
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3><i class="fa-solid fa-circle-info"></i> Equipment Details</h3>
+      <button class="modal-close" onclick="closeModal('detailsModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="detailsModalBody">
+      <!-- injected -->
+    </div>
+  </div>
+</div>
+
+<!-- ===================== LABEL MODAL ===================== -->
+<div class="modal-overlay" id="labelModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h3><i class="fa-solid fa-tag"></i> Print Equipment Label</h3>
+      <button class="modal-close" onclick="closeModal('labelModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-muted);margin-top:0;">Label format: 100mm &times; 50mm (industrial thermal label)</p>
+      <div id="printLabelWrap">
+        <div id="labelArea">
+          <div class="label-top">
+            <div>
+              <div class="label-company">SYRMA SGS</div>
+              <div class="label-info" id="labelInfo"></div>
+            </div>
+            <div class="label-qr" id="labelQr"></div>
+          </div>
+          <div class="label-footer">Equipment Management System</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doPrintLabel()"><i class="fa-solid fa-print"></i> Print</button>
+        <button class="btn btn-outline" onclick="closeModal('labelModal')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   SYRMA SGS EQUIPMENT MANAGEMENT SYSTEM
+   Single-file front-end application. Data persisted via LocalStorage.
+   ===================================================================== */
+
+const STORAGE_KEY = 'syrmaEquipmentData';
+
+let equipmentData = [];      // main dataset
+let pendingDocuments = [];   // documents attached to the form before save
+let editingAssetNumber = null; // currently edited asset (null = new entry)
+let sortState = { key: 'assetNumber', dir: 'asc' };
+
+document.getElementById('yearNow').textContent = new Date().getFullYear();
+
+/* ---------------------------------------------------------------------
+   PERSISTENCE
+--------------------------------------------------------------------- */
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    equipmentData = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.error('Failed to load data', e);
+    equipmentData = [];
+  }
+}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(equipmentData));
+  }catch(e){
+    alert('Unable to save data. Browser storage may be full.');
+    console.error(e);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   CALIBRATION STATUS HELPERS
+--------------------------------------------------------------------- */
+function getCalibrationInfo(dueDateStr, equipmentStatus){
+  if(equipmentStatus === 'Retired'){
+    return { cls:'retired', label:'Retired', rowCls:'row-retired' };
+  }
+  if(!dueDateStr){
+    return { cls:'valid', label:'No Date', rowCls:'' };
+  }
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const due = new Date(dueDateStr);
+  due.setHours(0,0,0,0);
+  const diffDays = Math.round((due - today) / 86400000);
+
+  if(diffDays < 0){
+    return { cls:'overdue', label:`Overdue by ${Math.abs(diffDays)} day(s)`, rowCls:'row-overdue', diffDays };
+  } else if(diffDays <= 30){
+    return { cls:'due', label:`Due in ${diffDays} day(s)`, rowCls:'row-due', diffDays };
+  } else {
+    return { cls:'valid', label:'Valid', rowCls:'row-valid', diffDays };
+  }
+}
+
+function formatDate(d){
+  if(!d) return '-';
+  const dt = new Date(d);
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function statusBadgeClass(status){
+  switch(status){
+    case 'Active': return 'badge-active';
+    case 'Under Maintenance': return 'badge-maintenance';
+    case 'Calibration Due': return 'badge-due';
+    case 'Retired': return 'badge-retired';
+    default: return 'badge-active';
+  }
+}
+
+/* ---------------------------------------------------------------------
+   STATS
+--------------------------------------------------------------------- */
+function renderStats(){
+  let total = equipmentData.length;
+  let active = 0, due = 0, overdue = 0;
+  equipmentData.forEach(eq => {
+    if(eq.status === 'Active') active++;
+    const cal = getCalibrationInfo(eq.calibrationDueDate, eq.status);
+    if(cal.cls === 'overdue') overdue++;
+    else if(cal.cls === 'due') due++;
+  });
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statDue').textContent = due;
+  document.getElementById('statOverdue').textContent = overdue;
+}
+
+/* ---------------------------------------------------------------------
+   QR CODE GENERATION
+--------------------------------------------------------------------- */
+function buildQrText(eq){
+  return [
+    `Asset No: ${eq.assetNumber}`,
+    `Serial No: ${eq.serialNumber}`,
+    `Machine: ${eq.machineName}`,
+    `Calibration Due: ${eq.calibrationDueDate || '-'}`,
+    `Location: ${eq.location || '-'}`,
+    `Owner: ${eq.owner || '-'}`,
+    `Department: ${eq.department || '-'}`
+  ].join('\n');
+}
+
+function renderQrInto(containerEl, eq, size){
+  containerEl.innerHTML = '';
+  new QRCode(containerEl, {
+    text: buildQrText(eq),
+    width: size,
+    height: size,
+    correctLevel: QRCode.CorrectLevel.L
+  });
+}
+
+/* ---------------------------------------------------------------------
+   TABLE RENDERING
+--------------------------------------------------------------------- */
+function sortTable(key){
+  if(sortState.key === key){
+    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortState.key = key;
+    sortState.dir = 'asc';
+  }
+  renderTable();
+}
+
+function getFilteredSortedData(){
+  const term = document.getElementById('searchInput').value.trim().toLowerCase();
+  let data = equipmentData.slice();
+
+  if(term){
+    data = data.filter(eq =>
+      eq.assetNumber.toLowerCase().includes(term) ||
+      eq.serialNumber.toLowerCase().includes(term)
+    );
+  }
+
+  const { key, dir } = sortState;
+  data.sort((a,b) => {
+    let va = (a[key] || '').toString().toLowerCase();
+    let vb = (b[key] || '').toString().toLowerCase();
+    if(key === 'calibrationDueDate'){
+      va = a[key] || '';
+      vb = b[key] || '';
+    }
+    if(va < vb) return dir === 'asc' ? -1 : 1;
+    if(va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return data;
+}
+
+function renderTable(){
+  const tbody = document.getElementById('equipmentTableBody');
+  const emptyState = document.getElementById('emptyState');
+  const data = getFilteredSortedData();
+
+  tbody.innerHTML = '';
+
+  if(data.length === 0){
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'none';
+  }
+
+  data.forEach(eq => {
+    const cal = getCalibrationInfo(eq.calibrationDueDate, eq.status);
+    const tr = document.createElement('tr');
+    tr.className = cal.rowCls;
+    tr.onclick = (e) => {
+      if(e.target.closest('.action-icons')) return;
+      viewDetails(eq.assetNumber);
+    };
+
+    const docCount = (eq.documents || []).length;
+
+    tr.innerHTML = `
+      <td class="qr-cell"><div id="qr-row-${cssId(eq.assetNumber)}"></div></td>
+      <td class="mono"><strong>${escapeHtml(eq.assetNumber)}</strong></td>
+      <td class="mono">${escapeHtml(eq.serialNumber)}</td>
+      <td>${escapeHtml(eq.machineName)}</td>
+      <td>
+        <div class="cal-pill"><span class="cal-dot ${cal.cls}"></span>${formatDate(eq.calibrationDueDate)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${cal.label}</div>
+      </td>
+      <td>${escapeHtml(eq.location || '-')}</td>
+      <td>${escapeHtml(eq.owner || '-')}</td>
+      <td>${escapeHtml(eq.department || '-')}</td>
+      <td><span class="badge ${statusBadgeClass(eq.status)}">${escapeHtml(eq.status)}</span></td>
+      <td>
+        <button class="icon-btn" title="View Documents (${docCount})" onclick="viewDocuments('${jsStr(eq.assetNumber)}')">
+          <i class="fa-solid fa-paperclip"></i> ${docCount}
+        </button>
+      </td>
+      <td>
+        <div class="action-icons">
+          <button class="icon-btn" title="Print Label" onclick="openLabelModal('${jsStr(eq.assetNumber)}')"><i class="fa-solid fa-tag"></i></button>
+          <button class="icon-btn success" title="Edit" onclick="editEquipment('${jsStr(eq.assetNumber)}')"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn danger" title="Delete" onclick="deleteEquipment('${jsStr(eq.assetNumber)}')"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    // render QR after row inserted into DOM
+    const qrContainer = tr.querySelector(`#qr-row-${cssId(eq.assetNumber)}`);
+    renderQrInto(qrContainer, eq, 46);
+  });
+
+  // update sort icons
+  document.querySelectorAll('thead th[onclick]').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if(!icon) return;
+    const key = th.getAttribute('onclick').match(/'([^']+)'/)[1];
+    if(key === sortState.key){
+      icon.className = 'fa-solid sort-icon ' + (sortState.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+    } else {
+      icon.className = 'fa-solid fa-sort sort-icon';
+    }
+  });
+
+  renderStats();
+}
+
+/* ---------------------------------------------------------------------
+   UTILS
+--------------------------------------------------------------------- */
+function escapeHtml(str){
+  if(str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function jsStr(str){
+  return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function cssId(str){
+  return String(str).replace(/[^a-zA-Z0-9_-]/g,'_');
+}
+
+/* ---------------------------------------------------------------------
+   FILE UPLOAD HANDLING
+--------------------------------------------------------------------- */
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+['dragover','dragleave','drop'].forEach(evt => {
+  uploadZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    if(evt === 'dragover') uploadZone.classList.add('dragover');
+    else uploadZone.classList.remove('dragover');
+    if(evt === 'drop') handleFiles(e.dataTransfer.files);
+  });
+});
+
+function handleFiles(fileList){
+  const allowed = ['application/pdf','image/jpeg','image/png','image/jpg'];
+  Array.from(fileList).forEach(file => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if(!allowed.includes(file.type) && !['pdf','jpg','jpeg','png'].includes(ext)){
+      alert(`File "${file.name}" is not a supported type. Allowed: PDF, JPG, JPEG, PNG.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingDocuments.push({
+        name: file.name,
+        type: file.type || (ext === 'pdf' ? 'application/pdf' : 'image/' + ext),
+        data: e.target.result
+      });
+      renderPendingDocs();
+    };
+    reader.readAsDataURL(file);
+  });
+  fileInput.value = '';
+}
+
+function renderPendingDocs(){
+  const wrap = document.getElementById('pendingDocList');
+  wrap.innerHTML = '';
+  pendingDocuments.forEach((doc, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'doc-chip';
+    if(doc.type.startsWith('image/')){
+      chip.innerHTML = `<img src="${doc.data}" alt="">`;
+    } else {
+      chip.innerHTML = `<i class="fa-solid fa-file-pdf"></i>`;
+    }
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = doc.name;
+    chip.appendChild(nameSpan);
+    const remove = document.createElement('i');
+    remove.className = 'fa-solid fa-circle-xmark remove-doc';
+    remove.title = 'Remove';
+    remove.onclick = () => { pendingDocuments.splice(idx,1); renderPendingDocs(); };
+    chip.appendChild(remove);
+    wrap.appendChild(chip);
+  });
+}
+
+/* ---------------------------------------------------------------------
+   FORM SUBMIT / VALIDATION
+--------------------------------------------------------------------- */
+document.getElementById('equipmentForm').addEventListener('submit', function(e){
+  e.preventDefault();
+
+  // clear previous invalid states
+  document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
+
+  const assetNumber = document.getElementById('assetNumber').value.trim();
+  const serialNumber = document.getElementById('serialNumber').value.trim();
+  const machineName = document.getElementById('machineName').value.trim();
+  const calibrationDueDate = document.getElementById('calibrationDueDate').value;
+  const location = document.getElementById('location').value.trim();
+  const owner = document.getElementById('owner').value.trim();
+  const department = document.getElementById('department').value.trim();
+  const status = document.getElementById('status').value;
+  const remarks = document.getElementById('remarks').value.trim();
+
+  let valid = true;
+  const required = {
+    assetNumber, serialNumber, machineName, calibrationDueDate, status
+  };
+  Object.entries(required).forEach(([key, val]) => {
+    if(!val){
+      document.getElementById('f-' + key).classList.add('invalid');
+      valid = false;
+    }
+  });
+
+  if(!valid){
+    alert('Please fill in all mandatory fields (marked with *).');
+    return;
+  }
+
+  // duplicate asset number check (only for new entries)
+  if(!editingAssetNumber){
+    const exists = equipmentData.some(eq => eq.assetNumber.toLowerCase() === assetNumber.toLowerCase());
+    if(exists){
+      document.getElementById('f-assetNumber').classList.add('invalid');
+      alert('An equipment with this Asset Number already exists. Asset Number must be unique.');
+      return;
+    }
+  }
+
+  if(editingAssetNumber){
+    // update existing record
+    const idx = equipmentData.findIndex(eq => eq.assetNumber === editingAssetNumber);
+    if(idx > -1){
+      const existing = equipmentData[idx];
+      existing.serialNumber = serialNumber;
+      existing.machineName = machineName;
+      existing.calibrationDueDate = calibrationDueDate;
+      existing.location = location;
+      existing.owner = owner;
+      existing.department = department;
+      existing.status = status;
+      existing.remarks = remarks;
+      existing.documents = (existing.documents || []).concat(pendingDocuments);
+    }
+  } else {
+    // new record
+    equipmentData.push({
+      assetNumber, serialNumber, machineName, calibrationDueDate,
+      location, owner, department, status, remarks,
+      documents: pendingDocuments.slice(),
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  saveData();
+  pendingDocuments = [];
+  resetForm();
+  renderTable();
+});
+
+function resetForm(){
+  document.getElementById('equipmentForm').reset();
+  document.getElementById('status').value = 'Active';
+  document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
+  pendingDocuments = [];
+  renderPendingDocs();
+  editingAssetNumber = null;
+  document.getElementById('assetNumber').readOnly = false;
+  document.getElementById('formTitle').textContent = 'Add New Equipment';
+  document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Add Equipment';
+}
+
+/* ---------------------------------------------------------------------
+   EDIT / DELETE
+--------------------------------------------------------------------- */
+function editEquipment(assetNumber){
+  const eq = equipmentData.find(e => e.assetNumber === assetNumber);
+  if(!eq) return;
+
+  document.getElementById('assetNumber').value = eq.assetNumber;
+  document.getElementById('serialNumber').value = eq.serialNumber;
+  document.getElementById('machineName').value = eq.machineName;
+  document.getElementById('calibrationDueDate').value = eq.calibrationDueDate;
+  document.getElementById('location').value = eq.location || '';
+  document.getElementById('owner').value = eq.owner || '';
+  document.getElementById('department').value = eq.department || '';
+  document.getElementById('status').value = eq.status;
+  document.getElementById('remarks').value = eq.remarks || '';
+
+  document.getElementById('assetNumber').readOnly = true;
+  editingAssetNumber = assetNumber;
+  pendingDocuments = [];
+  renderPendingDocs();
+
+  document.getElementById('formTitle').textContent = `Edit Equipment — ${eq.assetNumber}`;
+  document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Equipment';
+
+  document.querySelector('.card').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function deleteEquipment(assetNumber){
+  if(!confirm(`Delete equipment "${assetNumber}"? This action cannot be undone.`)) return;
+  equipmentData = equipmentData.filter(e => e.assetNumber !== assetNumber);
+  saveData();
+  if(editingAssetNumber === assetNumber) resetForm();
+  renderTable();
+}
+
+/* ---------------------------------------------------------------------
+   DETAILS MODAL
+--------------------------------------------------------------------- */
+function viewDetails(assetNumber){
+  const eq = equipmentData.find(e => e.assetNumber === assetNumber);
+  if(!eq) return;
+  const cal = getCalibrationInfo(eq.calibrationDueDate, eq.status);
+
+  const body = document.getElementById('detailsModalBody');
+  body.innerHTML = `
+    <div class="detail-qr-wrap">
+      <div id="detailQr"></div>
+      <div class="asset-tag">${escapeHtml(eq.assetNumber)}</div>
+      <span class="badge ${statusBadgeClass(eq.status)}">${escapeHtml(eq.status)}</span>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><label>Asset Number</label><div class="mono">${escapeHtml(eq.assetNumber)}</div></div>
+      <div class="detail-item"><label>Serial Number</label><div class="mono">${escapeHtml(eq.serialNumber)}</div></div>
+      <div class="detail-item"><label>Machine Name</label><div>${escapeHtml(eq.machineName)}</div></div>
+      <div class="detail-item"><label>Calibration Due Date</label><div><span class="cal-pill"><span class="cal-dot ${cal.cls}"></span>${formatDate(eq.calibrationDueDate)} &mdash; ${cal.label}</span></div></div>
+      <div class="detail-item"><label>Location</label><div>${escapeHtml(eq.location || '-')}</div></div>
+      <div class="detail-item"><label>Equipment Owner</label><div>${escapeHtml(eq.owner || '-')}</div></div>
+      <div class="detail-item"><label>Department</label><div>${escapeHtml(eq.department || '-')}</div></div>
+      <div class="detail-item"><label>Status</label><div>${escapeHtml(eq.status)}</div></div>
+      <div class="detail-item full"><label>Remarks</label><div>${escapeHtml(eq.remarks || '-')}</div></div>
+    </div>
+    <div class="section-title">Uploaded Documents</div>
+    <div class="docs-list" id="detailDocsList"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="openLabelModal('${jsStr(eq.assetNumber)}')"><i class="fa-solid fa-tag"></i> Print Label</button>
+      <button class="btn btn-success" onclick="editEquipment('${jsStr(eq.assetNumber)}'); closeModal('detailsModal');"><i class="fa-solid fa-pen"></i> Edit</button>
+      <button class="btn btn-outline" onclick="closeModal('detailsModal')">Close</button>
+    </div>
+  `;
+
+  renderQrInto(document.getElementById('detailQr'), eq, 150);
+  renderDocsList(document.getElementById('detailDocsList'), eq);
+  openModal('detailsModal');
+}
+
+function renderDocsList(container, eq){
+  const docs = eq.documents || [];
+  if(docs.length === 0){
+    container.innerHTML = `<p style="color:var(--text-muted);font-size:13px;margin:4px 0;">No documents uploaded for this asset.</p>`;
+    return;
+  }
+  container.innerHTML = '';
+  docs.forEach((doc, idx) => {
+    const row = document.createElement('div');
+    row.className = 'doc-row';
+    let thumb;
+    if(doc.type.startsWith('image/')){
+      thumb = `<img class="doc-thumb" src="${doc.data}" alt="">`;
+    } else {
+      thumb = `<div class="doc-thumb"><i class="fa-solid fa-file-pdf"></i></div>`;
+    }
+    row.innerHTML = `
+      ${thumb}
+      <div class="doc-name">${escapeHtml(doc.name)}</div>
+      <button class="btn btn-secondary btn-sm" type="button"><i class="fa-solid fa-up-right-from-square"></i> ${doc.type.startsWith('image/') ? 'Preview' : 'Open PDF'}</button>
+    `;
+    row.querySelector('button').onclick = () => openDocument(doc);
+    container.appendChild(row);
+  });
+}
+
+function openDocument(doc){
+  // Convert data URL to Blob then open in new tab for reliability with large files
+  fetch(doc.data)
+    .then(res => res.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    })
+    .catch(() => {
+      window.open(doc.data, '_blank');
+    });
+}
+
+/* ---------------------------------------------------------------------
+   DOCUMENTS MODAL (from list view)
+--------------------------------------------------------------------- */
+function viewDocuments(assetNumber){
+  viewDetails(assetNumber);
+  setTimeout(() => {
+    const el = document.getElementById('detailDocsList');
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 100);
+}
+
+/* ---------------------------------------------------------------------
+   LABEL PRINT MODAL
+--------------------------------------------------------------------- */
+function openLabelModal(assetNumber){
+  const eq = equipmentData.find(e => e.assetNumber === assetNumber);
+  if(!eq) return;
+
+  document.getElementById('labelInfo').innerHTML = `
+    <div><b>Asset No:</b> ${escapeHtml(eq.assetNumber)}</div>
+    <div><b>Machine:</b> ${escapeHtml(eq.machineName)}</div>
+    <div><b>Serial No:</b> ${escapeHtml(eq.serialNumber)}</div>
+    <div><b>Calib. Due:</b> ${formatDate(eq.calibrationDueDate)}</div>
+    <div><b>Location:</b> ${escapeHtml(eq.location || '-')}</div>
+  `;
+  renderQrInto(document.getElementById('labelQr'), eq, 90);
+  openModal('labelModal');
+}
+
+function doPrintLabel(){
+  document.body.classList.add('printing-label');
+  window.print();
+}
+window.addEventListener('afterprint', () => {
+  document.body.classList.remove('printing-label');
+});
+
+/* ---------------------------------------------------------------------
+   MODAL HELPERS
+--------------------------------------------------------------------- */
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if(e.target === overlay) overlay.classList.remove('open');
+  });
+});
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+/* ---------------------------------------------------------------------
+   EXPORT: EXCEL / CSV / PRINT LIST
+--------------------------------------------------------------------- */
+function getExportRows(){
+  return equipmentData.map(eq => {
+    const cal = getCalibrationInfo(eq.calibrationDueDate, eq.status);
+    return {
+      'Asset Number': eq.assetNumber,
+      'Serial Number': eq.serialNumber,
+      'Machine Name': eq.machineName,
+      'Calibration Due Date': eq.calibrationDueDate,
+      'Calibration Status': cal.label,
+      'Location': eq.location || '',
+      'Owner': eq.owner || '',
+      'Department': eq.department || '',
+      'Status': eq.status,
+      'Remarks': eq.remarks || '',
+      'Documents Attached': (eq.documents || []).length
+    };
+  });
+}
+
+function exportExcel(){
+  if(equipmentData.length === 0){ alert('No equipment data to export.'); return; }
+  const rows = getExportRows();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Equipment');
+  XLSX.writeFile(wb, `Syrma_SGS_Equipment_${dateStamp()}.xlsx`);
+}
+
+function exportCSV(){
+  if(equipmentData.length === 0){ alert('No equipment data to export.'); return; }
+  const rows = getExportRows();
+  const headers = Object.keys(rows[0]);
+  const csvLines = [headers.join(',')];
+  rows.forEach(r => {
+    csvLines.push(headers.map(h => `"${String(r[h]).replace(/"/g,'""')}"`).join(','));
+  });
+  const csvContent = csvLines.join('\n');
+  const blob = new Blob([csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Syrma_SGS_Equipment_${dateStamp()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function dateStamp(){
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function printList(){
+  if(equipmentData.length === 0){ alert('No equipment data to print.'); return; }
+  const rows = getExportRows();
+  const headers = Object.keys(rows[0]);
+  let html = `
+    <html><head><title>Syrma SGS - Equipment List</title>
+    <style>
+      body{font-family:Arial,sans-serif; padding:20px; color:#1b2430;}
+      h1{color:#0b3d6f; font-size:18px; margin-bottom:4px;}
+      p{color:#647386; font-size:12px; margin-top:0;}
+      table{width:100%; border-collapse:collapse; font-size:11px;}
+      th,td{border:1px solid #ccc; padding:6px 8px; text-align:left;}
+      th{background:#0b3d6f; color:#fff;}
+      tr:nth-child(even){background:#f5f8fb;}
+    </style></head><body>
+    <h1>Syrma SGS Technology Ltd. — Equipment List</h1>
+    <p>Generated on ${new Date().toLocaleString('en-IN')}</p>
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>
+  `;
+  rows.forEach(r => {
+    html += `<tr>${headers.map(h=>`<td>${escapeHtml(String(r[h]))}</td>`).join('')}</tr>`;
+  });
+  html += `</tbody></table></body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+}
+
+/* ---------------------------------------------------------------------
+   INIT
+--------------------------------------------------------------------- */
+loadData();
+renderTable();
+document.getElementById('status').value = 'Active';
+</script>
+</body>
+</html>
